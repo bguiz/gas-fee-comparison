@@ -1,0 +1,28 @@
+{
+  "name": "gas-fee-comparison",
+  "version": "0.0.0",
+  "description": "Comparing gas fees for transactions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bguiz/gas-fee-comparison.git"
+  },
+  "keywords": [
+    "gas",
+    "rsk",
+    "ethereum"
+  ],
+  "author": "bguiz",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/bguiz/gas-fee-comparison/issues"
+  },
+  "homepage": "https://github.com/bguiz/gas-fee-comparison#readme",
+  "dependencies": {
+    "@truffle/hdwallet-provider": "1.2.0",
+    "web3": "1.2.11"
+  }
+}
