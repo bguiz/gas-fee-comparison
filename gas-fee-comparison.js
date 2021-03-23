@@ -189,7 +189,7 @@ async function performComparison() {
     names, 'gasUsed', getGasUsedForTx,
   );
   const gasPricePromises = await executeAndLogForEach(
-    web3InstancesTestnet, names, 'currentGasPrice', getGasPrice,
+    web3InstancesMainnet, names, 'currentGasPrice', getGasPrice,
   );
 
   const coinPairs = [
