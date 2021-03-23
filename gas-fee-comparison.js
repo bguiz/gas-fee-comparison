@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const axios = require('axios');
+
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const Web3 = require('web3');
 
@@ -8,7 +10,7 @@ const mnemonicSeedPhrase = process.env.MNEMONIC ||
 const infuraProjectId = process.env.INFURA_PROJECT_ID ||
   '';
 
-function initialiseRsk() {
+function initialiseRskTestnet() {
   return new HDWalletProvider({
     mnemonic: {
       phrase: mnemonicSeedPhrase,
@@ -20,12 +22,36 @@ function initialiseRsk() {
   });
 }
 
-function initialiseEth() {
+function initialiseRskMainnet() {
+  return new HDWalletProvider({
+    mnemonic: {
+      phrase: mnemonicSeedPhrase,
+    },
+    providerOrUrl: 'https://public-node.rsk.co/',
+    derivationPath: "m/44'/137'/0'/0/",
+    // Higher polling interval to check for blocks less frequently
+    pollingInterval: 15e3,
+  });
+}
+
+function initialiseEthTestnet() {
   return new HDWalletProvider({
     mnemonic: {
       phrase: mnemonicSeedPhrase,
     },
     providerOrUrl: `https://kovan.infura.io/v3/${infuraProjectId}`,
+    derivationPath: "m/44'/60'/0'/0/",
+    // Higher polling interval to check for blocks less frequently
+    pollingInterval: 15e3,
+  });
+}
+
+function initialiseEthMainnet() {
+  return new HDWalletProvider({
+    mnemonic: {
+      phrase: mnemonicSeedPhrase,
+    },
+    providerOrUrl: `https://mainnet.infura.io/v3/${infuraProjectId}`,
     derivationPath: "m/44'/60'/0'/0/",
     // Higher polling interval to check for blocks less frequently
     pollingInterval: 15e3,
@@ -115,23 +141,28 @@ async function performComparison() {
     'ethereum',
   ];
 
-  const web3ProviderRsk = initialiseRsk();
-  const web3ProviderEth = initialiseEth();
-  const web3Providers = [
-    web3ProviderRsk,
-    web3ProviderEth,
+  const web3ProvidersTestnet = [
+    initialiseRskTestnet(),
+    initialiseEthTestnet(),
+  ];
+  const web3ProvidersMainnet = [
+    initialiseRskMainnet(),
+    initialiseEthMainnet(),
   ];
 
-  const web3InstanceRsk = new Web3(web3ProviderRsk);
-  const web3InstanceEth = new Web3(web3ProviderEth);
-  const web3Instances = [
-    web3InstanceRsk,
-    web3InstanceEth,
-  ];
+  const web3InstancesTestnet = web3ProvidersTestnet
+    .map(
+      (web3Provider) => (new Web3(web3Provider)),
+    );
+  const web3InstancesMainnet = web3ProvidersMainnet
+    .map(
+      (web3Provider) => (new Web3(web3Provider)),
+    );
 
-  web3Providers.forEach(cleanUp);
+  web3ProvidersTestnet.forEach(cleanUp);
+  web3ProvidersMainnet.forEach(cleanUp);
   await executeAndLogForEach(
-    web3Instances, names, 'blockNumber', getBlockNumber,
+    web3InstancesTestnet, names, 'blockNumber', getBlockNumber,
   );
 
   const rifTokenAddresses = [
@@ -152,13 +183,13 @@ async function performComparison() {
 
   const gasUsedPromises = await executeAndLogForEach(
     [
-      { web3Instance: web3Instances[0], txHash: rifTokenDeploymentTxHashes[0], },
-      { web3Instance: web3Instances[1], txHash: rifTokenDeploymentTxHashes[1], },
+      { web3Instance: web3InstancesTestnet[0], txHash: rifTokenDeploymentTxHashes[0], },
+      { web3Instance: web3InstancesTestnet[1], txHash: rifTokenDeploymentTxHashes[1], },
     ],
     names, 'gasUsed', getGasUsedForTx,
   );
   const gasPricePromises = await executeAndLogForEach(
-    web3Instances, names, 'currentGasPrice', getGasPrice,
+    web3InstancesTestnet, names, 'currentGasPrice', getGasPrice,
   );
 
   const coinPairs = [
@@ -175,7 +206,7 @@ async function performComparison() {
     .map((name, idx) => {
       return {
         name,
-        web3Instance: web3Instances[idx],
+        web3Instance: web3InstancesTestnet[idx],
         gasUsed: gasUsedResults[idx],
         gasPrice: gasPriceResults[idx],
         coinPair: coinPairResults[idx],
