@@ -222,6 +222,20 @@ async function performComparison() {
     await performComparisonOfTxFee(list, bguizErc20ExampleTokenTxList);
   console.log('ERC20 Example Token Deployment Transaction\n', bguizErc20ExampleTokenTxFeeResults);
 
+  const bguizErc721ExampleTokenTxList = [
+    {
+      address: '0xc2E29C80a5BDD4785AD520EBE92e53F9BdA8dF0b',
+      txHash: '0x0bbaf7f86191c3c0461b5ee99508abcfc6c5067c3a82e43f8dcc2efd792cf070',
+    },
+    {
+      address: '0xb78615d79cf590588c055319f96617c842040db9',
+      txHash: '0xc886a1475f07fdf3566c60e27f28c1dcecf3562a493ba28b1071cfe202385267',
+    },
+  ];
+  const bguizErc721ExampleTokenTxFeeResults =
+    await performComparisonOfTxFee(list, bguizErc721ExampleTokenTxList);
+  console.log('ERC721 Example Token Deployment Transaction\n', bguizErc721ExampleTokenTxFeeResults);
+
   list.forEach(cleanUp);
 }
 
