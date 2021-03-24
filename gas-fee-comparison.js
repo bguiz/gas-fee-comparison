@@ -162,34 +162,11 @@ async function performComparison() {
   web3ProvidersTestnet.forEach(cleanUp);
   web3ProvidersMainnet.forEach(cleanUp);
   await executeAndLogForEach(
-    web3InstancesTestnet, names, 'blockNumber', getBlockNumber,
+    web3InstancesTestnet, names, 'testnet/blockNumber', getBlockNumber,
   );
 
-  const rifTokenAddresses = [
-    '0x19f64674d8a5b4e652319f5e239efd3bc969a1fe',
-    '0x69f6d4d4813f8e2e618dae7572e04b6d5329e207',
-  ];
-  await executeAndLogForEach(
-    rifTokenAddresses, names, 'rifTokenContractAddress', ((x) => (x)),
-  );
-
-  const rifTokenDeploymentTxHashes = [
-    '0xf56cd8264ada751fec85d2646fb593ab3b4cf53e8104a6e5768097239b5fe2eb',
-    '0x1ecb1e45f7eb27e9fa4a43d2d71d37e92d1a1789b7b1bfbc4bf233598aeade52',
-  ];
-  await executeAndLogForEach(
-    rifTokenDeploymentTxHashes, names, 'rifTokenContractDeploymentTx', ((x) => (x)),
-  );
-
-  const gasUsedPromises = await executeAndLogForEach(
-    [
-      { web3Instance: web3InstancesTestnet[0], txHash: rifTokenDeploymentTxHashes[0], },
-      { web3Instance: web3InstancesTestnet[1], txHash: rifTokenDeploymentTxHashes[1], },
-    ],
-    names, 'gasUsed', getGasUsedForTx,
-  );
   const gasPricePromises = await executeAndLogForEach(
-    web3InstancesMainnet, names, 'currentGasPrice', getGasPrice,
+    web3InstancesMainnet, names, 'mainnet/currentGasPrice', getGasPrice,
   );
 
   const coinPairs = [
@@ -197,8 +174,40 @@ async function performComparison() {
     { coinSymbol: 'ETH', fiatSymbol: 'USD', },
   ];
   const coinPairPromises = await executeAndLogForEach(
-    coinPairs, names, 'coinPrice', getCoinPrice,
+    coinPairs, names, 'mainnet/coinPrice', getCoinPrice,
   );
+
+  const bguizErc20ExampleTokenAddresses = [
+    '0x89B110E7e17a62bf5D13009f9D500555611Cb4cD',
+    '0x83075fa1a90821ccc89eafc5a149c2b906f3d820',
+  ];
+  const bguizErc20ExampleTokenDeploymentTxHashes = [
+    '0x112dc1cd0a6c50aae90bcb37f0377b510ede046dffb1e18cb32d33a6a4ab2710',
+    '0xcb9067289d116059c81141840edb643f689ffa3c34767aa608fff8b919dec259',
+  ];
+
+  await executeAndLogForEach(
+    bguizErc20ExampleTokenAddresses,
+    names,
+    'testnet/bguizErc20ExampleTokenAddress',
+    ((x) => (x)),
+  );
+
+  await executeAndLogForEach(
+    bguizErc20ExampleTokenDeploymentTxHashes,
+    names,
+    'testnet/bguizErc20ExampleTokenDeploymentTxHash',
+    ((x) => (x)),
+  );
+
+  const gasUsedPromises = await executeAndLogForEach(
+    [
+      { web3Instance: web3InstancesTestnet[0], txHash: bguizErc20ExampleTokenDeploymentTxHashes[0], },
+      { web3Instance: web3InstancesTestnet[1], txHash: bguizErc20ExampleTokenDeploymentTxHashes[1], },
+    ],
+    names, 'testnet/gasUsed', getGasUsedForTx,
+  );
+
   const gasUsedResults = await Promise.all(gasUsedPromises);
   const gasPriceResults = await Promise.all(gasPricePromises);
   const coinPairResults = await Promise.all(coinPairPromises);
@@ -213,7 +222,7 @@ async function performComparison() {
       };
     })
     .map(augmentWithFees);
-  console.log('erc20 deployment (RIF token)', results);
+  console.log('erc20 deployment (Bguiz ERC20 Example Token)', results);
 }
 
 performComparison();
