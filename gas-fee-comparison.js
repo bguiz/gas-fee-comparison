@@ -58,24 +58,25 @@ function initialiseEthMainnet() {
   });
 }
 
-function cleanUp(web3Provider) {
-  web3Provider.engine.stop();
+function cleanUp({ web3ProviderTestnet, web3ProviderMainnet }) {
+  web3ProviderTestnet.engine.stop();
+  web3ProviderMainnet.engine.stop();
 }
 
-async function getBlockNumber(web3Instance) {
-  const block = await web3Instance.eth.getBlock('latest', false);
+async function getBlockNumber({ web3InstanceTestnet }) {
+  const block = await web3InstanceTestnet.eth.getBlock('latest', false);
   const blockNumber = block.number;
   return blockNumber;
 }
 
-async function getGasUsedForTx({ web3Instance, txHash }) {
-  const txReceipt = await web3Instance.eth.getTransactionReceipt(txHash);
+async function getGasUsedForTx({ web3InstanceTestnet, txHash }) {
+  const txReceipt = await web3InstanceTestnet.eth.getTransactionReceipt(txHash);
   const gasUsed = txReceipt.gasUsed;
   return gasUsed;
 }
 
-async function getGasPrice(web3Instance) {
-  return web3Instance.eth.getGasPrice();
+async function getGasPrice({ web3InstanceMainnet }) {
+  return web3InstanceMainnet.eth.getGasPrice();
 }
 
 async function getCoinPrice({ coinSymbol, fiatSymbol }) {
@@ -91,138 +92,137 @@ async function getCoinPrice({ coinSymbol, fiatSymbol }) {
   return response.data;
 }
 
-function augmentWithFees({
-  name,
-  web3Instance,
+function calculateFees({
+  web3InstanceTestnet,
   gasUsed,
   gasPrice,
-  coinPair,
+  coinPrice,
   decimalPoints = 18,
 }) {
-  const fiatRateInCents = web3Instance.utils.toBN(
-    Math.floor(coinPair.USD * 100),
+  const fiatRateInCents = web3InstanceTestnet.utils.toBN(
+    Math.floor(coinPrice.USD * 100),
   );
-  const decimalPointMultiplier = web3Instance.utils.toBN(
+  const decimalPointMultiplier = web3InstanceTestnet.utils.toBN(
     Math.pow(10, decimalPoints),
   );
-  const cryptoFee = web3Instance.utils.toBN(gasUsed)
-    .mul(web3Instance.utils.toBN(gasPrice));
+  const cryptoFee = web3InstanceTestnet.utils.toBN(gasUsed)
+    .mul(web3InstanceTestnet.utils.toBN(gasPrice));
   const fiatFeeCents = cryptoFee
     .mul(fiatRateInCents)
     .div(decimalPointMultiplier);
   const fiatFee = (fiatFeeCents.toNumber() / 100).toFixed(2);
   return {
-    name,
-    gasUsed,
-    gasPrice,
-    coinPair,
     cryptoFee: cryptoFee.toString(),
     fiatFee,
   };
 }
 
-async function executeAndLogForEach(
-  list,
-  names,
-  resultName,
-  execFunction,
-) {
-  const results = list.map(async (listItem, idx) => {
-    const result = await execFunction(listItem);
-    console.log(`${resultName}/${names[idx]} = ${result}`);
-    return result;
+async function init(item) {
+  const [blockNumber, coinPrice, gasPrice] = await Promise.all([
+    getBlockNumber(item),
+    getCoinPrice(item),
+    getGasPrice(item),
+  ]);
+  return {
+    blockNumber,
+    coinPrice,
+    gasPrice,
+  };
+}
+
+async function performComparisonOfTxFee(list, txList) {
+  const promises = list.map(async (item, idx) => {
+    const {
+      web3InstanceTestnet,
+      network,
+      coinPrice,
+      gasPrice,
+      decimalPoints,
+    } = item;
+    const {
+      address,
+      txHash,
+    } = txList[idx];
+    const gasUsed = await getGasUsedForTx({ web3InstanceTestnet, txHash });
+    const fees = calculateFees({
+      web3InstanceTestnet,
+      gasUsed,
+      gasPrice,
+      coinPrice,
+      decimalPoints,
+    });
+    const {
+      cryptoFee,
+      fiatFee,
+    } = fees;
+    return {
+      network,
+      coinPrice,
+      gasPrice,
+      address,
+      txHash,
+      gasUsed,
+      cryptoFee,
+      fiatFee,
+    };
   });
+  const results = await Promise.all(promises);
   return results;
 }
 
 async function performComparison() {
-  const names = [
-    'rsk',
-    'ethereum',
+  let list = [
+    {
+      network: 'rsk',
+      web3ProviderTestnet: initialiseRskTestnet(),
+      web3ProviderMainnet: initialiseRskMainnet(),
+      coinSymbol: 'BTC',
+      fiatSymbol: 'USD',
+      decimalPoints: 18,
+    },
+    {
+      network: 'ethereum',
+      web3ProviderTestnet: initialiseEthTestnet(),
+      web3ProviderMainnet: initialiseEthMainnet(),
+      coinSymbol: 'ETH',
+      fiatSymbol: 'USD',
+      decimalPoints: 18,
+    },
+  ].map((item) => {
+    const web3InstanceTestnet = (new Web3(item.web3ProviderTestnet));
+    const web3InstanceMainnet = (new Web3(item.web3ProviderMainnet));
+    return {
+      ...item,
+      web3InstanceTestnet,
+      web3InstanceMainnet,
+    };
+  });
+
+  const initPromises = list.map(init);
+  const initResults = await Promise.all(initPromises);
+  list = list.map((item, idx) => {
+    const initResult = initResults[idx];
+    return {
+      ...item,
+      ...initResult
+    };
+  });
+
+  const bguizErc20ExampleTokenTxList = [
+    {
+      address: '0x89B110E7e17a62bf5D13009f9D500555611Cb4cD',
+      txHash: '0x112dc1cd0a6c50aae90bcb37f0377b510ede046dffb1e18cb32d33a6a4ab2710',
+    },
+    {
+      address: '0x83075fa1a90821ccc89eafc5a149c2b906f3d820',
+      txHash: '0xcb9067289d116059c81141840edb643f689ffa3c34767aa608fff8b919dec259',
+    },
   ];
+  const bguizErc20ExampleTokenTxFeeResults =
+    await performComparisonOfTxFee(list, bguizErc20ExampleTokenTxList);
+  console.log('ERC20 Example Token Deployment Transaction\n', bguizErc20ExampleTokenTxFeeResults);
 
-  const web3ProvidersTestnet = [
-    initialiseRskTestnet(),
-    initialiseEthTestnet(),
-  ];
-  const web3ProvidersMainnet = [
-    initialiseRskMainnet(),
-    initialiseEthMainnet(),
-  ];
-
-  const web3InstancesTestnet = web3ProvidersTestnet
-    .map(
-      (web3Provider) => (new Web3(web3Provider)),
-    );
-  const web3InstancesMainnet = web3ProvidersMainnet
-    .map(
-      (web3Provider) => (new Web3(web3Provider)),
-    );
-
-  web3ProvidersTestnet.forEach(cleanUp);
-  web3ProvidersMainnet.forEach(cleanUp);
-  await executeAndLogForEach(
-    web3InstancesTestnet, names, 'testnet/blockNumber', getBlockNumber,
-  );
-
-  const gasPricePromises = await executeAndLogForEach(
-    web3InstancesMainnet, names, 'mainnet/currentGasPrice', getGasPrice,
-  );
-
-  const coinPairs = [
-    { coinSymbol: 'BTC', fiatSymbol: 'USD', },
-    { coinSymbol: 'ETH', fiatSymbol: 'USD', },
-  ];
-  const coinPairPromises = await executeAndLogForEach(
-    coinPairs, names, 'mainnet/coinPrice', getCoinPrice,
-  );
-
-  const bguizErc20ExampleTokenAddresses = [
-    '0x89B110E7e17a62bf5D13009f9D500555611Cb4cD',
-    '0x83075fa1a90821ccc89eafc5a149c2b906f3d820',
-  ];
-  const bguizErc20ExampleTokenDeploymentTxHashes = [
-    '0x112dc1cd0a6c50aae90bcb37f0377b510ede046dffb1e18cb32d33a6a4ab2710',
-    '0xcb9067289d116059c81141840edb643f689ffa3c34767aa608fff8b919dec259',
-  ];
-
-  await executeAndLogForEach(
-    bguizErc20ExampleTokenAddresses,
-    names,
-    'testnet/bguizErc20ExampleTokenAddress',
-    ((x) => (x)),
-  );
-
-  await executeAndLogForEach(
-    bguizErc20ExampleTokenDeploymentTxHashes,
-    names,
-    'testnet/bguizErc20ExampleTokenDeploymentTxHash',
-    ((x) => (x)),
-  );
-
-  const gasUsedPromises = await executeAndLogForEach(
-    [
-      { web3Instance: web3InstancesTestnet[0], txHash: bguizErc20ExampleTokenDeploymentTxHashes[0], },
-      { web3Instance: web3InstancesTestnet[1], txHash: bguizErc20ExampleTokenDeploymentTxHashes[1], },
-    ],
-    names, 'testnet/gasUsed', getGasUsedForTx,
-  );
-
-  const gasUsedResults = await Promise.all(gasUsedPromises);
-  const gasPriceResults = await Promise.all(gasPricePromises);
-  const coinPairResults = await Promise.all(coinPairPromises);
-  const results = names
-    .map((name, idx) => {
-      return {
-        name,
-        web3Instance: web3InstancesTestnet[idx],
-        gasUsed: gasUsedResults[idx],
-        gasPrice: gasPriceResults[idx],
-        coinPair: coinPairResults[idx],
-      };
-    })
-    .map(augmentWithFees);
-  console.log('erc20 deployment (Bguiz ERC20 Example Token)', results);
+  list.forEach(cleanUp);
 }
 
 performComparison();
