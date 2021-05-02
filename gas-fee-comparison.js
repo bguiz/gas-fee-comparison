@@ -5,6 +5,8 @@ const axios = require('axios');
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const Web3 = require('web3');
 
+const energyData = require('./energy-data.json');
+
 const mnemonicSeedPhrase = process.env.MNEMONIC ||
   '';
 const infuraProjectId = process.env.INFURA_PROJECT_ID ||
@@ -92,6 +94,47 @@ async function getCoinPrice({ coinSymbol, fiatSymbol }) {
   return response.data;
 }
 
+async function getEnergyData({ network, energyProfileId }) {
+  const energyProfile = energyData.energyProfiles[energyProfileId];
+  if (!energyProfile) {
+    throw new Error(`No energy profile found for "${energyProfileId}"`);
+  }
+  const networkProfile = energyData.networkProfiles[network];
+  if (!networkProfile) {
+    throw new Error(`No network profile found for "${network}"`);
+  }
+  const {
+    carbonEnergyIntensity, // gCO2e/kWh
+  } = energyProfile;
+  const {
+    networkEnergyConsumption, // kWh
+    networkAverageGasPerDay, // Gwei
+  } = networkProfile;
+  return {
+    carbonEnergyIntensity,
+    networkEnergyConsumption,
+    networkAverageGasPerDay,
+  };
+}
+
+// gCo2e --> grams of carbon dioxide equivalent for selected transaction
+async function calculateCarbon({
+  web3InstanceTestnet,
+  gasUsed, // wei
+  carbonEnergyIntensity, // gCO2e/kWh
+  networkEnergyConsumption, // kWh
+  networkAverageGasPerDay, // Gwei
+}) {
+  toBN = web3InstanceTestnet.utils.toBN;
+  return toBN(gasUsed)
+    .mul(toBN(Math.floor(carbonEnergyIntensity * 10e3)))
+    .mul(toBN(Math.floor(networkEnergyConsumption * 10e3)))
+    .div(toBN(Math.floor(networkAverageGasPerDay / 24 * 10e9)))
+    .div(toBN(10e6))
+    .toNumber()
+    .toFixed(2);
+}
+
 function calculateFees({
   web3InstanceTestnet,
   gasUsed,
@@ -118,15 +161,17 @@ function calculateFees({
 }
 
 async function init(item) {
-  const [blockNumber, coinPrice, gasPrice] = await Promise.all([
+  const [blockNumber, coinPrice, gasPrice, energyData] = await Promise.all([
     getBlockNumber(item),
     getCoinPrice(item),
     getGasPrice(item),
+    getEnergyData(item),
   ]);
   return {
     blockNumber,
     coinPrice,
     gasPrice,
+    energyData,
   };
 }
 
@@ -138,6 +183,7 @@ async function performComparisonOfTxFee(list, txList) {
       coinPrice,
       gasPrice,
       decimalPoints,
+      energyData,
     } = item;
     const {
       description,
@@ -156,6 +202,20 @@ async function performComparisonOfTxFee(list, txList) {
       cryptoFee,
       fiatFee,
     } = fees;
+
+    const {
+      carbonEnergyIntensity,
+      networkEnergyConsumption,
+      networkAverageGasPerDay,
+    } = energyData;
+    const carbon = await calculateCarbon({
+      web3InstanceTestnet,
+      gasUsed,
+      carbonEnergyIntensity,
+      networkEnergyConsumption,
+      networkAverageGasPerDay,
+    });
+
     return {
       network,
       description,
@@ -166,6 +226,8 @@ async function performComparisonOfTxFee(list, txList) {
       gasUsed,
       cryptoFee,
       fiatFee,
+      carbonEnergyIntensity,
+      carbon,
     };
   });
   const results = await Promise.all(promises);
@@ -181,6 +243,7 @@ async function performComparison() {
       coinSymbol: 'BTC',
       fiatSymbol: 'USD',
       decimalPoints: 18,
+      energyProfileId: 'cn',
     },
     {
       network: 'ethereum',
@@ -189,6 +252,7 @@ async function performComparison() {
       coinSymbol: 'ETH',
       fiatSymbol: 'USD',
       decimalPoints: 18,
+      energyProfileId: 'cn',
     },
   ].map((item) => {
     const web3InstanceTestnet = (new Web3(item.web3ProviderTestnet));
