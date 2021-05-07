@@ -1,0 +1,76 @@
+{
+  "energyProfiles": {
+    "overall": {
+      "name": "Overall World Average 2019",
+      "desc": "World Average Carbon Intensity of Electricity Generated",
+      "year": "2019",
+      "unit": "gC02e/kWh",
+      "sources": [
+        "https://www.iea.org/reports/global-energy-co2-status-report-2019/emissions"
+      ],
+      "carbonEnergyIntensity": 475.0
+    },
+    "coal": {
+      "name": "Coal World Average 2014",
+      "desc": "World Average CO2 intensity by fuel- Coal",
+      "year": "2014",
+      "unit": "gC02e/kWh",
+      "sources": [
+        "https://www.iea.org/reports/global-energy-co2-status-report-2019/emissions"
+      ],
+      "carbonEnergyIntensity": 879.0
+    },
+    "oil": {
+      "name": "Oil World Average 2014",
+      "desc": "World Average CO2 intensity by fuel- Oil",
+      "year": "2014",
+      "unit": "gC02e/kWh",
+      "sources": [
+        "https://www.iea.org/reports/global-energy-co2-status-report-2019/emissions"
+      ],
+      "carbonEnergyIntensity": 713.0
+    },
+    "gas": {
+      "name": "Gas World Average 2014",
+      "desc": "World Average CO2 intensity by fuel- Gas",
+      "year": "2014",
+      "unit": "gC02e/kWh",
+      "sources": [
+        "https://www.iea.org/reports/global-energy-co2-status-report-2019/emissions"
+      ],
+      "carbonEnergyIntensity": 391.0
+    },
+    "renewables1": {
+      "name": "Wind/ Solar/ Nuclear (Estimated) 2017",
+      "desc": "Life-cycle GHG emissions for the three technologies - Wind/ Solar/ Nuclear",
+      "year": "2017",
+      "unit": "gC02e/kWh",
+      "sources": [
+        "https://www.terrestrialenergy.com/wp-content/uploads/2020/07/Pehl_et_al-2017-Nature_Energy.pdf"
+      ],
+      "carbonEnergyIntensity": 11.5
+    }
+  },
+  "networkProfiles": {
+    "ethereum": {
+      "name": "Ethereum Mainnet",
+      "desc": "Ethereum (actual) (2021/05/05)",
+      "unit": "kWh",
+      "sources": [
+        "https://digiconomist.net/ethereum-energy-consumption/",
+        "https://etherscan.io/chart/gasused"
+      ],
+      "networkEnergyConsumption": 42419.8,
+      "networkAverageGasPerDay": 95.24923
+    },
+    "rsk": {
+      "rsk": "RSK Mainnet",
+      "desc": "RSK (data copy of Ethereum) (2021/05/05)",
+      "unit": "kWh",
+      "sources": [],
+      "note": "Data currently unavailable, update when known. Currently exists as copy of figures from Ethereum.",
+      "networkEnergyConsumption": 42419.8,
+      "networkAverageGasPerDay": 95.24923
+    }
+  }
+}
