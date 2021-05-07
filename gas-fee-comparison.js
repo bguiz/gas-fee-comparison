@@ -7,10 +7,10 @@ const Web3 = require('web3');
 
 const energyData = require('./energy-data.json');
 
-const mnemonicSeedPhrase = process.env.MNEMONIC ||
-  '';
-const infuraProjectId = process.env.INFURA_PROJECT_ID ||
-  '';
+require('dotenv').config();
+
+const mnemonicSeedPhrase = process.env.MNEMONIC || '';
+const infuraProjectId = process.env.INFURA_PROJECT_ID || '';
 
 function initialiseRskTestnet() {
   return new HDWalletProvider({
